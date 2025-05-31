@@ -1,26 +1,21 @@
-import { session } from './session.js';
-const socket   = io();
-const lobbyId  = session.lobby();
-const player   = session.player();
-
-// Join room on socket side
-socket.emit('join_room_socket', lobbyId);
-
-socket.on('lobby_update', data => {
-  document.getElementById('room-name').textContent = data.name;
-  document.getElementById('room-code').textContent = data.id;
-  const list = document.getElementById('players');
-  list.innerHTML = '';
-  data.players.forEach(p => {
-    const li = document.createElement('li');
-    li.textContent = p.name + (p.ready ? ' ✓' : '') + (p.name === player ? ' (you)' : '');
-    list.appendChild(li);
-  });
-});
-
-// Ready toggle
-window.addEventListener('keydown', e => {
-  if (e.key === 'r') socket.emit('toggle_ready', lobbyId);
-});
-
-document.getElementById('start-btn').onclick = () => socket.emit('start_game', lobbyId);
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Spy Card – Lobby</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="lobby-header">
+    <div>Room: <span id="room-name"></span> / Code: <span id="room-code"></span></div>
+    <button id="start-btn" class="start-btn hidden">START</button>
+  </div>
+  <div class="lobby-grid">
+    <section class="card"><h3>Players</h3><ul id="players"></ul></section>
+    <section class="card"><h3>Chat</h3><div id="chat"></div><input id="msg" /><button id="send">→</button></section>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="js/lobby.js"></script>
+</body>
+</html>

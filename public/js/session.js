@@ -1,20 +1,8 @@
-// Session Management: Save and load player & lobby info in localStorage
-
-const session = {
-  savePlayerName(name) {
+export const session = {
+  save(name, lobbyId) {
     localStorage.setItem('playerName', name);
+    localStorage.setItem('lobbyId', lobbyId);
   },
-  getPlayerName() {
-    return localStorage.getItem('playerName');
-  },
-  saveLobbyName(name) {
-    localStorage.setItem('lobbyName', name);
-  },
-  getLobbyName() {
-    return localStorage.getItem('lobbyName');
-  },
-  clear() {
-    localStorage.removeItem('playerName');
-    localStorage.removeItem('lobbyName');
-  }
+  player()  { return localStorage.getItem('playerName'); },
+  lobby()   { return localStorage.getItem('lobbyId'); }
 };

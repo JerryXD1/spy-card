@@ -1,25 +1,13 @@
 {
   "name": "spy-card",
-  "version": "1.0.0",
-  "main": "server.js",
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/JerryXD1/spycard.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/JerryXD1/spycard/issues"
-  },
-  "homepage": "https://github.com/JerryXD1/spycard#readme",
-  "description": "",
   "dependencies": {
-    "express": "^5.1.0",
-    "ws": "^8.18.2"
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "nanoid": "^5.0.2"
   }
 }

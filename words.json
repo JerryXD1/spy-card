@@ -1,0 +1,8 @@
+[
+  { "word": "Iron Man",     "category": "Film" },
+  { "word": "Eiffelturm",   "category": "Sehenswürdigkeit" },
+  { "word": "Super Mario",  "category": "Spiel" },
+  { "word": "Tesla",        "category": "Firma" },
+  { "word": "Berlin",       "category": "Stadt" }
+  // … 495 weitere Begriffe
+]

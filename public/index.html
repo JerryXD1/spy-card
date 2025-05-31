@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spy Card – Home</title>
+
+  <!-- dein bestehendes CSS oder Tailwind -->
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&family=Montserrat:wght@600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- ─────────── Homescreen ─────────── -->
+  <div id="main-container">
+    <div class="game-header">
+      <div class="game-title">SPY CARD</div>
+      <div class="game-subtitle">Find the impostor</div>
+    </div>
+
+    <div class="action-buttons">
+      <!-- Buttons UNTEREINANDER -->
+      <button id="create-lobby-btn" class="action-btn create-btn">CREATE LOBBY</button>
+      <button id="join-lobby-btn"   class="action-btn join-btn">JOIN LOBBY</button>
+    </div>
+  </div>
+
+  <!-- ─────────── Popups ─────────── -->
+  <div id="popup-overlay" class="hidden">
+    <div id="popup" class="popup-card">
+      <button id="close-popup" class="close-btn">×</button>
+      <div id="popup-content"><!-- wird per JS gefüllt --></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/session.js"></script>
+  <script src="js/index.js"></script>
+</body>
+</html>

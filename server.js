@@ -1,72 +1,80 @@
-const express = require('express');
-const WebSocket = require('ws');
-const http = require('http');
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import { nanoid } from 'nanoid';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.static('public'));
-
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const io = new Server(server);
 
-let clients = new Map(); // Map für username + ws
+app.use(express.static(path.join(__dirname, 'public')));
 
-wss.on('connection', ws => {
-  console.log('Neuer Client verbunden');
+const PORT = process.env.PORT || 3000;
 
-  ws.on('message', message => {
-    try {
-      const data = JSON.parse(message);
-      // Beispiel: Nachricht ist { type: "join", username: "Jerry", room: "room1" }
-      if (data.type === 'join') {
-        clients.set(ws, { username: data.username, room: data.room, ready: false, isHost: false });
-        console.log(`${data.username} ist dem Raum ${data.room} beigetreten`);
-        broadcastPlayerList(data.room);
-      }
-      // Weitere Nachrichten (ready, chat, kick, promote etc.) können hier ergänzt werden
+// Wortbank laden
+const words = JSON.parse(fs.readFileSync(path.join(__dirname, 'words.json'), 'utf-8'));
 
-      // Beispiel Chat Broadcast an alle im Raum
-      if (data.type === 'chat') {
-        broadcastToRoom(data.room, JSON.stringify({ type: 'chat', from: data.from, message: data.message }));
-      }
+// Spiele-Daten
+const games = {};
 
-      // Broadcast an alle
-      // wss.clients.forEach(client => {
-      //   if (client.readyState === WebSocket.OPEN) client.send(message);
-      // });
-    } catch(e) {
-      console.log('Fehler beim Parsen:', e);
+io.on('connection', (socket) => {
+  console.log('Neuer User:', socket.id);
+
+  socket.on('createLobby', ({ roomName }) => {
+    if (!roomName) {
+      socket.emit('errorMessage', 'Room name required');
+      return;
     }
+    if (games[roomName]) {
+      socket.emit('errorMessage', 'Room name already taken');
+      return;
+    }
+    games[roomName] = {
+      players: [],
+      state: 'waiting',
+      wordData: null,
+    };
+    socket.join(roomName);
+    games[roomName].players.push({ id: socket.id, name: `Player-${socket.id.slice(0,4)}` });
+    socket.emit('lobbyCreated', roomName);
+    io.to(roomName).emit('updatePlayers', games[roomName].players);
   });
 
-  ws.on('close', () => {
-    console.log('Client getrennt');
-    const client = clients.get(ws);
-    if (client) {
-      clients.delete(ws);
-      broadcastPlayerList(client.room);
+  socket.on('joinLobby', ({ roomName }) => {
+    if (!roomName || !games[roomName]) {
+      socket.emit('errorMessage', 'Room not found');
+      return;
+    }
+    socket.join(roomName);
+    games[roomName].players.push({ id: socket.id, name: `Player-${socket.id.slice(0,4)}` });
+    io.to(roomName).emit('updatePlayers', games[roomName].players);
+    socket.emit('lobbyJoined', roomName);
+  });
+
+  // Hier kann weitere Spiellogik hinzugefügt werden
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+    for (const roomName in games) {
+      const game = games[roomName];
+      const idx = game.players.findIndex(p => p.id === socket.id);
+      if (idx !== -1) {
+        game.players.splice(idx, 1);
+        io.to(roomName).emit('updatePlayers', game.players);
+        if (game.players.length === 0) {
+          delete games[roomName];
+        }
+      }
     }
   });
 });
 
-function broadcastToRoom(room, message) {
-  for (const [client, info] of clients.entries()) {
-    if (info.room === room && client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  }
-}
-
-function broadcastPlayerList(room) {
-  const players = [];
-  for (const [client, info] of clients.entries()) {
-    if (info.room === room) {
-      players.push({ username: info.username, ready: info.ready, isHost: info.isHost });
-    }
-  }
-  broadcastToRoom(room, JSON.stringify({ type: 'playerList', players }));
-}
-
-const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server läuft auf Port ${PORT}`);
 });

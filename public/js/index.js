@@ -1,41 +1,67 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const playerNameInput = document.getElementById('playerName');
-  const lobbyNameInput = document.getElementById('lobbyName');
-  const createLobbyBtn = document.getElementById('createLobbyBtn');
-  const joinLobbyBtn = document.getElementById('joinLobbyBtn');
-  const form = document.getElementById('createJoinForm');
+const socket = io();
 
-  // Load saved player/lobby names if any
-  const savedPlayerName = session.getPlayerName();
-  if (savedPlayerName) playerNameInput.value = savedPlayerName;
-  const savedLobbyName = session.getLobbyName();
-  if (savedLobbyName) lobbyNameInput.value = savedLobbyName;
+const btnCreateLobby = document.getElementById('btnCreateLobby');
+const btnJoinLobby = document.getElementById('btnJoinLobby');
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const playerName = playerNameInput.value.trim();
-    const lobbyName = lobbyNameInput.value.trim();
+const modalCreate = document.getElementById('modalCreate');
+const modalJoin = document.getElementById('modalJoin');
 
-    if (!playerName || !lobbyName) return;
+const closeCreate = document.getElementById('closeCreate');
+const closeJoin = document.getElementById('closeJoin');
 
-    session.savePlayerName(playerName);
-    session.saveLobbyName(lobbyName);
+const confirmCreate = document.getElementById('confirmCreate');
+const confirmJoin = document.getElementById('confirmJoin');
 
-    // Hier: Lobby erstellen
-    // Beispiel: Weiterleitung auf lobby.html
-    window.location.href = 'lobby.html';
-  });
+btnCreateLobby.addEventListener('click', () => {
+  modalCreate.style.display = 'flex';
+});
 
-  joinLobbyBtn.addEventListener('click', () => {
-    const playerName = playerNameInput.value.trim();
-    const lobbyName = lobbyNameInput.value.trim();
+btnJoinLobby.addEventListener('click', () => {
+  modalJoin.style.display = 'flex';
+});
 
-    if (!playerName || !lobbyName) return;
+closeCreate.addEventListener('click', () => {
+  modalCreate.style.display = 'none';
+  document.getElementById('createRoomName').value = '';
+});
 
-    session.savePlayerName(playerName);
-    session.saveLobbyName(lobbyName);
+closeJoin.addEventListener('click', () => {
+  modalJoin.style.display = 'none';
+  document.getElementById('joinRoomName').value = '';
+});
 
-    // Weiterleitung zur Lobby
-    window.location.href = 'lobby.html';
-  });
+confirmCreate.addEventListener('click', () => {
+  const roomName = document.getElementById('createRoomName').value.trim();
+  if (roomName.length === 0) {
+    alert('Bitte gib einen Raum-Namen ein.');
+    return;
+  }
+  socket.emit('createLobby', { roomName });
+});
+
+confirmJoin.addEventListener('click', () => {
+  const roomName = document.getElementById('joinRoomName').value.trim();
+  if (roomName.length === 0) {
+    alert('Bitte gib einen Raum-Namen ein.');
+    return;
+  }
+  socket.emit('joinLobby', { roomName });
+});
+
+// Events vom Server
+
+socket.on('errorMessage', (msg) => {
+  alert(msg);
+});
+
+socket.on('lobbyCreated', (roomName) => {
+  alert(`Lobby "${roomName}" erstellt!`);
+  modalCreate.style.display = 'none';
+  window.location.href = `/lobby.html?room=${encodeURIComponent(roomName)}`;
+});
+
+socket.on('lobbyJoined', (roomName) => {
+  alert(`Lobby "${roomName}" beigetreten!`);
+  modalJoin.style.display = 'none';
+  window.location.href = `/lobby.html?room=${encodeURIComponent(roomName)}`;
 });

@@ -1,90 +1,215 @@
-// url params → ?room=myroom&host=1&player=Jerry
-const qp    = new URLSearchParams(location.search);
-const code  = qp.get('room');
-const host  = qp.get('host') === '1';
-const me    = qp.get('player') || 'You';
-
-document.getElementById('roomName').textContent = code;
-const startBtn  = document.getElementById('startBtn');
-const readyBtn  = document.getElementById('readyBtn');
-const chatBox   = document.getElementById('chatBox');
-const chatInput = document.getElementById('chatInput');
-const sendChat  = document.getElementById('sendChat');
-const pCount    = document.getElementById('pCount');
-const pMax      = document.getElementById('pMax');
-const playerList= document.getElementById('playerList');
-const impInput  = document.getElementById('impInput');
-const maxInput  = document.getElementById('maxInput');
-const catWrap   = document.getElementById('catWrap');
-
-const socket = io();
-
-// Host-UI
-if (host) startBtn.classList.remove('hidden');
-else { impInput.disabled = maxInput.disabled = true; }
-
-const categories = ['People','Films','Series','Games','Places','Brands'];
-categories.forEach(c=>{
-  catWrap.insertAdjacentHTML('beforeend',`
-  <label class="flex items-center gap-2">
-    <input type="checkbox" value="${c}" class="cat accent-purple-500" checked ${!host&&'disabled'}>
-    <span>${c}</span>
-  </label>`);
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room');
+    
+    if (!roomId) {
+        window.location.href = '/';
+        return;
+    }
+    
+    // Connect to WebSocket
+    const socket = new WebSocket(`ws://${window.location.host}/ws?room=${roomId}`);
+    
+    // Get player role (host or guest)
+    let isHost = false;
+    
+    socket.onopen = () => {
+        console.log('Connected to WebSocket');
+        
+        // Check if we're the host
+        const storedUsername = localStorage.getItem('username');
+        if (storedUsername) {
+            socket.send(JSON.stringify({
+                type: 'identify',
+                username: storedUsername,
+                room: roomId
+            }));
+        }
+    };
+    
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        switch (data.type) {
+            case 'playerList':
+                updatePlayerList(data.players);
+                break;
+            case 'role':
+                isHost = data.isHost;
+                updateUIForRole(isHost);
+                break;
+            case 'gameStart':
+                window.location.href = `/game.html?room=${roomId}`;
+                break;
+            case 'chatMessage':
+                addChatMessage(data.sender, data.message);
+                break;
+        }
+    };
+    
+    socket.onclose = () => {
+        console.log('Disconnected from WebSocket');
+    };
+    
+    // Update player list
+    function updatePlayerList(players) {
+        const playerList = document.getElementById('players');
+        const playerCount = document.getElementById('playerCount');
+        
+        playerList.innerHTML = '';
+        playerCount.textContent = players.length;
+        
+        players.forEach(player => {
+            const li = document.createElement('li');
+            li.textContent = player.username;
+            if (player.isReady) {
+                li.textContent += ' ✓';
+            }
+            
+            if (isHost) {
+                li.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    showPlayerContextMenu(e, player);
+                });
+            }
+            
+            playerList.appendChild(li);
+        });
+    }
+    
+    // Show context menu for host
+    function showPlayerContextMenu(event, player) {
+        // Implement context menu for kick/promote
+        const menu = document.createElement('div');
+        menu.className = 'context-menu';
+        menu.innerHTML = `
+            <ul>
+                <li class="promote">Promote to Host</li>
+                <li class="kick">Kick Player</li>
+            </ul>
+        `;
+        
+        menu.style.position = 'absolute';
+        menu.style.left = `${event.clientX}px`;
+        menu.style.top = `${event.clientY}px`;
+        menu.style.backgroundColor = 'white';
+        menu.style.border = '1px solid #ccc';
+        menu.style.zIndex = '1000';
+        
+        document.body.appendChild(menu);
+        
+        // Handle menu clicks
+        menu.querySelector('.promote').addEventListener('click', () => {
+            socket.send(JSON.stringify({
+                type: 'promote',
+                playerId: player.id
+            }));
+            document.body.removeChild(menu);
+        });
+        
+        menu.querySelector('.kick').addEventListener('click', () => {
+            socket.send(JSON.stringify({
+                type: 'kick',
+                playerId: player.id
+            }));
+            document.body.removeChild(menu);
+        });
+        
+        // Close menu when clicking elsewhere
+        window.addEventListener('click', () => {
+            if (document.body.contains(menu)) {
+                document.body.removeChild(menu);
+            }
+        }, { once: true });
+    }
+    
+    // Update UI based on role
+    function updateUIForRole(host) {
+        if (host) {
+            document.querySelectorAll('.host-only').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.player-only').forEach(el => el.style.display = 'none');
+        } else {
+            document.querySelectorAll('.host-only').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.player-only').forEach(el => el.style.display = 'block');
+        }
+    }
+    
+    // Chat functionality
+    const chatInput = document.getElementById('chatInput');
+    const sendMessageBtn = document.getElementById('sendMessage');
+    
+    function addChatMessage(sender, message) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageElement = document.createElement('div');
+        messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+        chatMessages.appendChild(messageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    sendMessageBtn.addEventListener('click', sendChatMessage);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendChatMessage();
+        }
+    });
+    
+    function sendChatMessage() {
+        const message = chatInput.value.trim();
+        if (message) {
+            socket.send(JSON.stringify({
+                type: 'chatMessage',
+                message: message
+            }));
+            chatInput.value = '';
+        }
+    }
+    
+    // Ready/Start game buttons
+    const readyButton = document.getElementById('readyButton');
+    const startGameButton = document.getElementById('startGame');
+    
+    if (readyButton) {
+        readyButton.addEventListener('click', () => {
+            const isReady = readyButton.textContent.includes('Ready');
+            readyButton.textContent = isReady ? 'Not Ready' : 'Ready';
+            socket.send(JSON.stringify({
+                type: 'setReady',
+                ready: !isReady
+            }));
+        });
+    }
+    
+    if (startGameButton) {
+        startGameButton.addEventListener('click', () => {
+            socket.send(JSON.stringify({
+                type: 'startGame'
+            }));
+        });
+    }
+    
+    // Settings modal
+    const settingsModal = document.getElementById('settingsModal');
+    const gameSettingsBtn = document.getElementById('gameSettings');
+    const saveSettingsBtn = document.getElementById('saveSettings');
+    
+    if (gameSettingsBtn) {
+        gameSettingsBtn.addEventListener('click', () => {
+            settingsModal.style.display = 'block';
+        });
+    }
+    
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', () => {
+            const roundTime = document.getElementById('roundTime').value;
+            const maxPlayers = document.getElementById('maxPlayers').value;
+            
+            socket.send(JSON.stringify({
+                type: 'updateSettings',
+                roundTime: roundTime,
+                maxPlayers: maxPlayers
+            }));
+            
+            settingsModal.style.display = 'none';
+        });
+    }
 });
-
-// Events
-readyBtn.onclick = ()=>socket.emit('toggleReady', code);
-startBtn.onclick = ()=>socket.emit('startGame', code);
-
-sendChat.onclick = sendMsg;
-chatInput.addEventListener('keydown',e=>e.key==='Enter'&&sendMsg());
-
-function sendMsg(){
-  const m = chatInput.value.trim();
-  if(!m) return;
-  socket.emit('chat',{code,msg:m});
-  chatInput.value='';
-}
-
-// Host-Änderungen
-[impInput,maxInput].forEach(inp=>{
-  inp.onchange = ()=>{
-    if(!host) return;
-    const cats=[...document.querySelectorAll('.cat:checked')].map(c=>c.value);
-    socket.emit('updateSettings',{code,settings:{
-      imposter:+impInput.value||1,
-      maxPlayers:+maxInput.value||8,
-      categories:cats
-    }});
-  };
-});
-catWrap.addEventListener('change',()=>impInput.onchange());
-
-// Server-Events
-socket.on('lobbyUpdate', data=>{
-  pCount.textContent = data.players.length;
-  pMax.textContent   = data.settings.maxPlayers;
-  playerList.innerHTML='';
-  data.players.forEach(p=>{
-    playerList.insertAdjacentHTML('beforeend',`
-      <li class="flex justify-between bg-black/30 px-3 py-1 rounded">
-        <span>${p.name}${p.id===socket.id?' (you)':''}</span>
-        ${p.ready?'<span class="text-green-400">✓</span>':''}
-      </li>`);
-  });
-  impInput.value = data.settings.imposter;
-  maxInput.value = data.settings.maxPlayers;
-  document.querySelectorAll('.cat').forEach(cb=>{
-    cb.checked = data.settings.categories.includes(cb.value);
-  });
-});
-
-socket.on('chat', ({sender,msg})=>{
-  chatBox.insertAdjacentHTML('beforeend',`<div><span class="text-purple-400">${sender}:</span> ${msg}</div>`);
-  chatBox.scrollTop=chatBox.scrollHeight;
-});
-
-socket.on('card', data=>{
-  alert(data.word?`You are citizen with word: ${data.word}`:`You are IMPOSTER! Hint: ${data.hint}`);
-});
-socket.on('gameStarted',()=>alert('Game started!'));

@@ -1,54 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spy Card – Lobby</title>
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lobby - Spy Card Game</title>
+    <link href="/style.css" rel="stylesheet">
 </head>
-<body class="bg-[#0f0e1c] text-white min-h-screen flex flex-col">
-<header class="flex justify-between items-center px-6 py-4 bg-black/40">
-  <div class="text-2xl font-bold"><img src="spy-icon.svg" class="inline w-8 mr-2">Lobby <span id="roomName"></span></div>
-  <button id="startBtn" class="hidden bg-[#7b5cf2] hover:bg-[#977eff] px-4 py-2 rounded-lg font-bold">▶ Start</button>
-</header>
+<body>
+    <div class="lobby-container">
+        <div class="lobby-header">
+            <h1 id="lobbyTitle">Lobby: <span id="roomName"></span></h1>
+            <div id="lobbySettings" class="host-only">
+                <button id="gameSettings">Settings</button>
+                <button id="startGame">Start Game</button>
+            </div>
+            <button id="readyButton" class="player-only">Ready</button>
+        </div>
 
-<main class="flex-grow grid lg:grid-cols-[300px_1fr_300px] gap-6 p-6">
-  <!-- Chat -->
-  <section class="bg-[#1b1930] rounded-xl p-4 flex flex-col">
-    <h2 class="text-lg font-semibold mb-2">Chat</h2>
-    <div id="chatBox" class="flex-grow overflow-y-auto space-y-1 mb-2"></div>
-    <div class="flex">
-      <input id="chatInput" placeholder="Message" class="flex-grow bg-black/40 px-3 py-2 rounded-l-lg focus:outline-none">
-      <button id="sendChat" class="bg-[#7b5cf2] px-4 rounded-r-lg">Send</button>
-    </div>
-  </section>
+        <div class="lobby-content">
+            <div class="player-list">
+                <h2>Players (<span id="playerCount">0</span>)</h2>
+                <ul id="players">
+                    <!-- Players will be added dynamically -->
+                </ul>
+            </div>
 
-  <!-- Players -->
-  <section class="bg-[#1b1930] rounded-xl p-4 flex flex-col">
-    <h2 class="text-lg font-semibold mb-2">Players (<span id="pCount">0</span>/<span id="pMax">8</span>)</h2>
-    <ul id="playerList" class="flex-grow space-y-1 mb-4"></ul>
-    <button id="readyBtn" class="bg-green-600 hover:bg-green-500 w-full py-2 rounded-lg font-bold">✅ READY</button>
-  </section>
+            <div class="lobby-chat">
+                <div id="chatMessages"></div>
+                <input type="text" id="chatInput" placeholder="Type your message...">
+                <button id="sendMessage">Send</button>
+            </div>
+        </div>
+    </div>
 
-  <!-- Settings -->
-  <section class="bg-[#1b1930] rounded-xl p-4 space-y-3">
-    <h2 class="text-lg font-semibold">Settings</h2>
-    <div>
-      <label class="block mb-1">Imposter</label>
-      <input id="impInput" type="number" min="1" max="3" class="w-full bg-black/40 px-3 py-2 rounded-lg">
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Game Settings</h2>
+            <div class="setting-item">
+                <label for="roundTime">Round Time (minutes):</label>
+                <input type="number" id="roundTime" min="1" max="10" value="5">
+            </div>
+            <div class="setting-item">
+                <label for="maxPlayers">Max Players:</label>
+                <input type="number" id="maxPlayers" min="3" max="10" value="8">
+            </div>
+            <button id="saveSettings">Save Settings</button>
+        </div>
     </div>
-    <div>
-      <label class="block mb-1">Max Players</label>
-      <input id="maxInput" type="number" min="4" max="10" class="w-full bg-black/40 px-3 py-2 rounded-lg">
-    </div>
-    <div>
-      <label class="block mb-1">Categories</label>
-      <div id="catWrap" class="grid grid-cols-2 gap-2"></div>
-    </div>
-  </section>
-</main>
 
-<script src="/socket.io/socket.io.js"></script>
-<script type="module" src="js/lobby.js"></script>
+    <script src="/js/lobby.js"></script>
+    <script src="/js/session.js"></script>
 </body>
 </html>

@@ -1,100 +1,125 @@
-import express from 'express';
-import http from 'http';
-import { Server } from 'socket.io';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+const express = require('express');
+const WebSocket = require('ws');
+const path = require('path');
+const fs = require('fs');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-
-const app    = express();
-const server = http.createServer(app);
-const io     = new Server(server, { cors: { origin: '*' } });
-
+const app = express();
 const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0';
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Load words from JSON file
+const words = JSON.parse(fs.readFileSync('words.json', 'utf-8'));
 
-// Wortbank
-let words = [];
-try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'words.json'))); }
-catch { console.warn('⚠️  words.json fehlt oder invalide – benutze Fallback-Wort.'); words=[{word:'Test',category:'Test'}]; }
+// Serve static files
+app.use(express.static('public'));
+app.use(express.json());
 
-// Lobby-Cache
-const lobbies = new Map(); // code → {hostId, players:[{id,name,ready}], settings}
-
-io.on('connection', (sock) => {
-  console.log('🔌', sock.id);
-
-  sock.on('createLobby', ({ roomName, player }) => {
-    if (!roomName) return sock.emit('errorMessage','Room name required');
-    const code = roomName.toLowerCase();
-    if (lobbies.has(code)) return sock.emit('errorMessage','Room exists');
-
-    lobbies.set(code, {
-      hostId: sock.id,
-      players:[{ id:sock.id,name:player,ready:false }],
-      settings:{ imposter:1,maxPlayers:8,categories:['People','Films','Games'] }
-    });
-    sock.join(code);
-    sock.emit('lobbyCreated', code);
-    io.to(code).emit('lobbyUpdate', lobbies.get(code));
-  });
-
-  sock.on('joinLobby', ({ roomName, player }) => {
-    const lobby = lobbies.get(roomName?.toLowerCase());
-    if (!lobby) return sock.emit('errorMessage','Room not found');
-    if (lobby.players.length >= lobby.settings.maxPlayers) return sock.emit('errorMessage','Lobby full');
-
-    lobby.players.push({ id:sock.id,name:player,ready:false });
-    sock.join(roomName);
-    io.to(roomName).emit('lobbyUpdate', lobby);
-    sock.emit('lobbyJoined', roomName);
-  });
-
-  sock.on('toggleReady', (code) => {
-    const lobby = lobbies.get(code);
-    if (!lobby) return;
-    const p = lobby.players.find(p=>p.id===sock.id);
-    if (p) p.ready = !p.ready;
-    io.to(code).emit('lobbyUpdate', lobby);
-  });
-
-  sock.on('updateSettings', ({ code, settings }) => {
-    const lobby = lobbies.get(code);
-    if (lobby && sock.id===lobby.hostId) {
-      lobby.settings = settings;
-      io.to(code).emit('lobbyUpdate', lobby);
-    }
-  });
-
-  sock.on('startGame', (code) => {
-    const lobby = lobbies.get(code);
-    if (!lobby || sock.id!==lobby.hostId) return;
-
-    // Wort & Imposter zuteilen
-    const wordObj = words[Math.floor(Math.random()*words.length)];
-    const impIdx  = Math.floor(Math.random()*lobby.players.length);
-    lobby.players.forEach((p,i)=>{
-      io.to(p.id).emit('card', i===impIdx ? {hint:wordObj.category} : {word:wordObj.word});
-    });
-    io.to(code).emit('gameStarted');
-  });
-
-  sock.on('chat', ({code,msg})=>{
-    const p = lobbies.get(code)?.players.find(pl=>pl.id===sock.id);
-    if (p) io.to(code).emit('chat', {sender:p.name,msg});
-  });
-
-  sock.on('disconnect', ()=>{
-    for (const [code,lobby] of lobbies){
-      lobby.players = lobby.players.filter(p=>p.id!==sock.id);
-      if (!lobby.players.length) { lobbies.delete(code); }
-      else io.to(code).emit('lobbyUpdate', lobby);
-    }
-  });
+// API endpoints
+app.get('/categories', (req, res) => {
+    res.json(Object.keys(words));
 });
 
-server.listen(PORT, HOST, ()=>console.log(`🚀 http://${HOST}:${PORT}`));
+app.post('/create-lobby', (req, res) => {
+    const { name, categories } = req.body;
+    const roomId = generateRoomId();
+    
+    // In a real app, you'd store this in a database
+    lobbies[roomId] = {
+        name,
+        categories,
+        players: [],
+        settings: {
+            roundTime: 5,
+            maxPlayers: 8
+        }
+    };
+    
+    res.json({ roomId });
+});
+
+app.post('/join-lobby', (req, res) => {
+    const { room, username } = req.body;
+    
+    if (!lobbies[room]) {
+        return res.json({ success: false, message: 'Room not found' });
+    }
+    
+    if (lobbies[room].players.length >= lobbies[room].settings.maxPlayers) {
+        return res.json({ success: false, message: 'Room is full' });
+    }
+    
+    res.json({ success: true });
+});
+
+// Store lobbies in memory (in production, use a database)
+const lobbies = {};
+const clients = {};
+
+// Create HTTP server
+const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+
+// WebSocket server
+const wss = new WebSocket.Server({ server });
+
+wss.on('connection', (ws, req) => {
+    const roomId = new URLSearchParams(req.url.split('?')[1]).get('room');
+    
+    if (!roomId || !lobbies[roomId]) {
+        ws.close();
+        return;
+    }
+    
+    // Add to clients
+    const clientId = generateClientId();
+    clients[clientId] = { ws, roomId };
+    
+    ws.on('message', (message) => {
+        handleMessage(clientId, JSON.parse(message));
+    });
+    
+    ws.on('close', () => {
+        handleDisconnect(clientId);
+    });
+});
+
+function handleMessage(clientId, data) {
+    const client = clients[clientId];
+    if (!client) return;
+    
+    const roomId = client.roomId;
+    const lobby = lobbies[roomId];
+    
+    switch (data.type) {
+        case 'identify':
+            // Handle player identification
+            break;
+        case 'chatMessage':
+            // Broadcast chat message
+            break;
+        case 'setReady':
+            // Update player ready status
+            break;
+        case 'startGame':
+            // Start the game
+            break;
+        case 'requestVote':
+            // Initiate voting
+            break;
+        case 'submitVote':
+            // Handle vote submission
+            break;
+        case 'submitGuess':
+            // Handle imposter's guess
+            break;
+    }
+}
+
+// Helper functions
+function generateRoomId() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function generateClientId() {
+    return Math.random().toString(36).substring(2, 10);
+}

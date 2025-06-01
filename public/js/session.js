@@ -1,8 +1,12 @@
-export const session = {
-  save(name, lobbyId) {
-    localStorage.setItem('playerName', name);
-    localStorage.setItem('lobbyId', lobbyId);
-  },
-  player()  { return localStorage.getItem('playerName'); },
-  lobby()   { return localStorage.getItem('lobbyId'); }
-};
+// Simple session management using localStorage
+function storeUsername(username) {
+    localStorage.setItem('username', username);
+}
+
+function getStoredUsername() {
+    return localStorage.getItem('username');
+}
+
+function clearSession() {
+    localStorage.removeItem('username');
+}

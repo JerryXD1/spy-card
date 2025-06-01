@@ -1,7 +1,7 @@
-[
-  { "word": "Iron Man",     "category": "Film" },
-  { "word": "Eiffelturm",   "category": "Sehenswürdigkeit" },
-  { "word": "Super Mario",  "category": "Spiel" },
-  { "word": "Tesla",        "category": "Firma" },
-  { "word": "Berlin",       "category": "Stadt" }
-]
+{
+    "People": ["Albert Einstein", "Leonardo da Vinci", "Marie Curie", "William Shakespeare"],
+    "Movies": ["The Godfather", "Pulp Fiction", "The Dark Knight", "Inception"],
+    "Countries": ["Germany", "Japan", "Brazil", "Australia"],
+    "Animals": ["Elephant", "Giraffe", "Kangaroo", "Penguin"],
+    "Food": ["Pizza", "Sushi", "Taco", "Pasta"]
+}

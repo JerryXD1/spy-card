@@ -1,67 +1,33 @@
-const socket = io();
-
-const btnCreateLobby = document.getElementById('btnCreateLobby');
-const btnJoinLobby = document.getElementById('btnJoinLobby');
-
-const modalCreate = document.getElementById('modalCreate');
-const modalJoin = document.getElementById('modalJoin');
-
-const closeCreate = document.getElementById('closeCreate');
-const closeJoin = document.getElementById('closeJoin');
-
-const confirmCreate = document.getElementById('confirmCreate');
-const confirmJoin = document.getElementById('confirmJoin');
-
-btnCreateLobby.addEventListener('click', () => {
-  modalCreate.style.display = 'flex';
+document.getElementById('createBtn').addEventListener('click', () => {
+  document.getElementById('createModal').classList.remove('hidden');
 });
 
-btnJoinLobby.addEventListener('click', () => {
-  modalJoin.style.display = 'flex';
+document.getElementById('joinBtn').addEventListener('click', () => {
+  document.getElementById('joinModal').classList.remove('hidden');
 });
 
-closeCreate.addEventListener('click', () => {
-  modalCreate.style.display = 'none';
-  document.getElementById('createRoomName').value = '';
+document.getElementById('closeCreate').addEventListener('click', () => {
+  document.getElementById('createModal').classList.add('hidden');
 });
 
-closeJoin.addEventListener('click', () => {
-  modalJoin.style.display = 'none';
-  document.getElementById('joinRoomName').value = '';
+document.getElementById('closeJoin').addEventListener('click', () => {
+  document.getElementById('joinModal').classList.add('hidden');
 });
 
-confirmCreate.addEventListener('click', () => {
-  const roomName = document.getElementById('createRoomName').value.trim();
-  if (roomName.length === 0) {
-    alert('Bitte gib einen Raum-Namen ein.');
-    return;
+document.getElementById('confirmCreate').addEventListener('click', () => {
+  const roomName = document.getElementById('createRoomName').value;
+  if (roomName) {
+    localStorage.setItem("roomName", roomName);
+    window.location.href = "lobby.html";
   }
-  socket.emit('createLobby', { roomName });
 });
 
-confirmJoin.addEventListener('click', () => {
-  const roomName = document.getElementById('joinRoomName').value.trim();
-  if (roomName.length === 0) {
-    alert('Bitte gib einen Raum-Namen ein.');
-    return;
+document.getElementById('confirmJoin').addEventListener('click', () => {
+  const roomName = document.getElementById('joinRoomName').value;
+  const code = document.getElementById('joinCode').value;
+  if (roomName && code) {
+    localStorage.setItem("roomName", roomName);
+    localStorage.setItem("joinCode", code);
+    window.location.href = "lobby.html";
   }
-  socket.emit('joinLobby', { roomName });
-});
-
-// Events vom Server
-
-socket.on('errorMessage', (msg) => {
-  alert(msg);
-});
-
-socket.on('lobbyCreated', (roomName) => {
-  alert(`Lobby "${roomName}" erstellt!`);
-  modalCreate.style.display = 'none';
-  window.location.href = `/lobby.html?room=${encodeURIComponent(roomName)}`;
-});
-
-socket.on('lobbyJoined', (roomName) => {
-  alert(`Lobby "${roomName}" beigetreten!`);
-  modalJoin.style.display = 'none';
-  window.location.href = `/lobby.html?room=${encodeURIComponent(roomName)}`;
 });

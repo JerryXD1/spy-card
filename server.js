@@ -8,158 +8,115 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Load words from JSON file
+// Load words
 const words = JSON.parse(readFileSync(path.join(__dirname, 'words.json'), 'utf-8'));
 
-// Serve static files
+// Middleware
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// API endpoints
-app.get('/categories', (req, res) => {
-  res.json(Object.keys(words));
-});
+// Routes
+app.get('/categories', (req, res) => res.json(Object.keys(words)));
 
 app.post('/create-lobby', (req, res) => {
-  const { name, categories } = req.body;
-  const roomId = generateRoomId();
-  
+  const roomId = generateId(6);
   lobbies[roomId] = {
-    name,
-    categories,
+    name: req.body.name,
+    categories: req.body.categories,
     players: [],
     settings: {
       roundTime: 5,
       maxPlayers: 8
     }
   };
-  
   res.json({ roomId });
 });
 
 app.post('/join-lobby', (req, res) => {
-  const { room, username } = req.body;
-  
-  if (!lobbies[room]) {
-    return res.json({ success: false, message: 'Room not found' });
-  }
-  
+  const room = req.body.room;
+  if (!lobbies[room]) return res.json({ success: false, message: 'Room not found' });
   if (lobbies[room].players.length >= lobbies[room].settings.maxPlayers) {
-    return res.json({ success: false, message: 'Room is full' });
+    return res.json({ success: false, message: 'Room full' });
   }
-  
   res.json({ success: true });
 });
 
-// Store lobbies in memory
+// WebSocket
 const lobbies = {};
 const clients = {};
-
-// Create HTTP server
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-// WebSocket server
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws, req) => {
   const roomId = new URL(req.url, `http://${req.headers.host}`).searchParams.get('room');
-  
-  if (!roomId || !lobbies[roomId]) {
-    ws.close();
-    return;
-  }
-  
-  const clientId = generateClientId();
+  if (!lobbies[roomId]) return ws.close();
+
+  const clientId = generateId(8);
   clients[clientId] = { ws, roomId };
-  
-  ws.on('message', (message) => {
-    handleMessage(clientId, JSON.parse(message));
-  });
-  
-  ws.on('close', () => {
-    handleDisconnect(clientId);
-  });
+
+  ws.on('message', data => handleMessage(clientId, JSON.parse(data)));
+  ws.on('close', () => handleDisconnect(clientId));
 });
 
 function handleMessage(clientId, data) {
-  const client = clients[clientId];
-  if (!client) return;
-  
-  const roomId = client.roomId;
-  const lobby = lobbies[roomId];
-  
+  const { ws, roomId } = clients[clientId] || {};
+  if (!ws) return;
+
   switch (data.type) {
     case 'identify':
-      handleIdentify(clientId, data);
+      const player = {
+        id: clientId,
+        username: data.username,
+        isHost: lobbies[roomId].players.length === 0,
+        isReady: false
+      };
+      lobbies[roomId].players.push(player);
+      ws.send(JSON.stringify({ type: 'role', isHost: player.isHost }));
+      broadcast(roomId, { type: 'playerList', players: lobbies[roomId].players });
       break;
+
+    case 'updateSettings':
+      if (lobbies[roomId].players.find(p => p.id === clientId)?.isHost) {
+        lobbies[roomId].settings = { ...lobbies[roomId].settings, ...data };
+        broadcast(roomId, { type: 'settingsUpdate', settings: lobbies[roomId].settings });
+      }
+      break;
+
+    case 'setReady':
+      const playerToUpdate = lobbies[roomId].players.find(p => p.id === clientId);
+      if (playerToUpdate) playerToUpdate.isReady = data.ready;
+      broadcast(roomId, { type: 'playerList', players: lobbies[roomId].players });
+      break;
+
+    case 'startGame':
+      if (lobbies[roomId].players.find(p => p.id === clientId)?.isHost) {
+        broadcast(roomId, { type: 'gameStart' });
+      }
+      break;
+
     case 'chatMessage':
-      broadcastToRoom(roomId, {
-        type: 'chatMessage',
-        sender: data.sender,
-        message: data.message
-      });
+      broadcast(roomId, { type: 'chatMessage', sender: data.sender, message: data.message });
       break;
-    // Add other cases as needed
   }
 }
 
-function handleIdentify(clientId, data) {
-  const client = clients[clientId];
-  const lobby = lobbies[client.roomId];
-  
-  const player = {
-    id: clientId,
-    username: data.username,
-    isHost: lobby.players.length === 0,
-    isReady: false
-  };
-  
-  lobby.players.push(player);
-  
-  client.ws.send(JSON.stringify({
-    type: 'role',
-    isHost: player.isHost
-  }));
-  
-  broadcastPlayerList(client.roomId);
+function handleDisconnect(clientId) {
+  const { roomId } = clients[clientId] || {};
+  if (!roomId) return;
+
+  lobbies[roomId].players = lobbies[roomId].players.filter(p => p.id !== clientId);
+  delete clients[clientId];
+  broadcast(roomId, { type: 'playerList', players: lobbies[roomId].players });
 }
 
-function broadcastPlayerList(roomId) {
-  const lobby = lobbies[roomId];
-  broadcastToRoom(roomId, {
-    type: 'playerList',
-    players: lobby.players
-  });
-}
-
-function broadcastToRoom(roomId, message) {
-  Object.entries(clients).forEach(([id, client]) => {
+function broadcast(roomId, message) {
+  Object.values(clients).forEach(client => {
     if (client.roomId === roomId) {
       client.ws.send(JSON.stringify(message));
     }
   });
 }
 
-function handleDisconnect(clientId) {
-  const client = clients[clientId];
-  if (!client) return;
-  
-  const lobby = lobbies[client.roomId];
-  if (lobby) {
-    lobby.players = lobby.players.filter(p => p.id !== clientId);
-    broadcastPlayerList(client.roomId);
-  }
-  
-  delete clients[clientId];
-}
-
-// Helper functions
-function generateRoomId() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
-
-function generateClientId() {
-  return Math.random().toString(36).substring(2, 10);
+function generateId(length) {
+  return Math.random().toString(36).substring(2, 2+length).toUpperCase();
 }

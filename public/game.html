@@ -1,58 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game - Spy Card Game</title>
-    <link href="/style.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game - Spy Card</title>
+  <link href="/style.css" rel="stylesheet">
 </head>
 <body>
-    <div class="game-container">
-        <div class="game-chat">
-            <h2>Game Chat</h2>
-            <div id="gameChatMessages"></div>
-            <input type="text" id="gameChatInput" placeholder="Describe the word...">
-            <button id="sendGameMessage">Send</button>
-            
-            <div id="voteSection">
-                <button id="initiateVote">Vote for Spy</button>
-                <div id="voteModal" class="modal">
-                    <div class="modal-content">
-                        <h3>Vote for who you think is the spy:</h3>
-                        <ul id="votePlayers">
-                            <!-- Players to vote for -->
-                        </ul>
-                        <button id="submitVote">Submit Vote</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="game-main">
-            <div id="gameInfo">
-                <h2>Round: <span id="roundNumber">1</span></h2>
-                <p>Time left: <span id="timeLeft">05:00</span></p>
-                <p id="roleInfo">You are: <span id="playerRole">Regular Player</span></p>
-            </div>
-
-            <div id="imposterSection" class="imposter-only">
-                <button id="guessWord">Guess the Word</button>
-                <div id="guessModal" class="modal">
-                    <div class="modal-content">
-                        <h3>Guess the Word</h3>
-                        <input type="text" id="wordGuess" placeholder="Enter the word">
-                        <button id="submitGuess">Submit</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="gameResult">
-                <!-- Will show game results -->
-            </div>
-        </div>
+  <div class="container game">
+    <div class="lobby-sidebar">
+      <div class="game-info">
+        <h2>Round <span id="roundNumber">1</span></h2>
+        <p>Time: <span id="timeLeft">05:00</span></p>
+        <p>Role: <span id="playerRole">Player</span></p>
+      </div>
+      
+      <div id="imposterSection" class="imposter-only">
+        <button id="guessWord">Guess Word</button>
+      </div>
+      
+      <button id="initiateVote" class="danger">Vote for Spy</button>
     </div>
+    
+    <div class="lobby-main">
+      <div class="chat-container">
+        <div id="gameChatMessages" class="chat-messages"></div>
+        <div class="chat-input">
+          <input type="text" id="gameChatInput" placeholder="Describe the word...">
+          <button id="sendGameMessage">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <script src="/js/game.js"></script>
-    <script src="/js/session.js"></script>
+  <script src="/js/game.js"></script>
 </body>
 </html>

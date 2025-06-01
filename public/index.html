@@ -1,45 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spy Card Game</title>
-    <link href="/style.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spy Card</title>
+  <link href="/style.css" rel="stylesheet">
 </head>
 <body>
-    <div class="start-container">
-        <h1>Spy Card Game</h1>
+  <div class="container flex-center">
+    <div class="start-screen">
+      <h1>Spy Card</h1>
+      <div class="start-buttons">
         <button id="createParty">Create Party</button>
         <button id="joinParty">Join Party</button>
+      </div>
     </div>
+  </div>
 
-    <!-- Create Party Modal -->
-    <div id="createModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Create Party</h2>
-            <input type="text" id="lobbyName" placeholder="Lobby Name">
-            <h3>Select Categories:</h3>
-            <div id="categoriesList">
-                <!-- Categories will be loaded from words.json -->
-            </div>
-            <button id="selectAll">Select All</button>
-            <button id="createLobby">Create Lobby</button>
-        </div>
-    </div>
-
-    <!-- Join Party Modal -->
-    <div id="joinModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Join Party</h2>
-            <input type="text" id="roomCode" placeholder="Room Code">
-            <input type="text" id="username" placeholder="Your Name">
-            <button id="joinLobby">Join</button>
-        </div>
-    </div>
-
-    <script src="/js/index.js"></script>
-    <script src="/js/session.js"></script>
+  <script src="/js/index.js"></script>
 </body>
 </html>

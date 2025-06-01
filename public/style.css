@@ -1,134 +1,184 @@
-/* General Styles */
+:root {
+  --primary: #5865F2;
+  --secondary: #404EED;
+  --dark: #23272A;
+  --light: #FFFFFF;
+  --success: #57F287;
+  --danger: #ED4245;
+  --warning: #FEE75C;
+  --background: #36393F;
+  --card-bg: #2F3136;
+  --text-light: #DCDDDE;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f0f0f0;
+  background-color: var(--background);
+  color: var(--text-light);
+  min-height: 100vh;
 }
 
-/* Modal Styles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.4);
+button {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  margin: 8px;
 }
 
-.modal-content {
-    background-color: #fefefe;
-    margin: 15% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 500px;
-    border-radius: 8px;
+button:hover {
+  background-color: var(--secondary);
+  transform: translateY(-2px);
 }
 
-.close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
+button.danger {
+  background-color: var(--danger);
+}
+
+button.success {
+  background-color: var(--success);
+}
+
+button.warning {
+  background-color: var(--warning);
+  color: var(--dark);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
 /* Start Screen */
-.start-container {
-    text-align: center;
-    margin-top: 100px;
+.start-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  text-align: center;
 }
 
-.start-container button {
-    display: block;
-    margin: 20px auto;
-    padding: 10px 20px;
-    font-size: 18px;
-    cursor: pointer;
+.start-screen h1 {
+  font-size: 3rem;
+  margin-bottom: 2rem;
+  color: var(--light);
+}
+
+.start-buttons {
+  display: flex;
+  gap: 20px;
 }
 
 /* Lobby Screen */
 .lobby-container {
-    display: flex;
-    flex-direction: column;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  height: 100vh;
+  padding: 20px;
 }
 
-.lobby-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
+.lobby-sidebar {
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
-.lobby-content {
-    display: flex;
-    gap: 20px;
+.lobby-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .player-list {
-    flex: 1;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  padding: 20px;
+  flex: 1;
 }
 
-.lobby-chat {
-    flex: 2;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
+.player-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--dark);
 }
 
-#chatMessages, #gameChatMessages {
-    flex-grow: 1;
-    height: 300px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    padding: 10px;
+.player-item:last-child {
+  border-bottom: none;
+}
+
+.game-settings {
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.setting-item {
+  margin-bottom: 15px;
+}
+
+.setting-item label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.setting-item input, .setting-item select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: none;
+  background-color: var(--dark);
+  color: var(--text-light);
 }
 
 /* Game Screen */
 .game-container {
-    display: flex;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    gap: 20px;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  height: 100vh;
+  padding: 20px;
 }
 
 .game-chat {
-    flex: 1;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .game-main {
-    flex: 2;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-/* Utility Classes */
-.host-only, .imposter-only, .player-only {
-    display: none;
+.game-info {
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-    .lobby-content, .game-container {
-        flex-direction: column;
-    }
+  .lobby-container, .game-container {
+    grid-template-columns: 1fr;
+  }
 }

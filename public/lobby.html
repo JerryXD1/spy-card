@@ -1,56 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lobby - Spy Card Game</title>
-    <link href="/style.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lobby - Spy Card</title>
+  <link href="/style.css" rel="stylesheet">
 </head>
 <body>
-    <div class="lobby-container">
-        <div class="lobby-header">
-            <h1 id="lobbyTitle">Lobby: <span id="roomName"></span></h1>
-            <div id="lobbySettings" class="host-only">
-                <button id="gameSettings">Settings</button>
-                <button id="startGame">Start Game</button>
-            </div>
-            <button id="readyButton" class="player-only">Ready</button>
+  <div class="container lobby">
+    <div class="lobby-sidebar">
+      <h2>Players</h2>
+      <ul id="players" class="player-list"></ul>
+      
+      <div id="lobbySettings" class="host-only">
+        <h2>Game Settings</h2>
+        <div class="setting">
+          <label>Round Time (min)</label>
+          <input type="number" id="roundTime" min="1" max="10" value="5">
         </div>
-
-        <div class="lobby-content">
-            <div class="player-list">
-                <h2>Players (<span id="playerCount">0</span>)</h2>
-                <ul id="players">
-                    <!-- Players will be added dynamically -->
-                </ul>
-            </div>
-
-            <div class="lobby-chat">
-                <div id="chatMessages"></div>
-                <input type="text" id="chatInput" placeholder="Type your message...">
-                <button id="sendMessage">Send</button>
-            </div>
+        <div class="setting">
+          <label>Max Players</label>
+          <input type="number" id="maxPlayers" min="3" max="10" value="8">
         </div>
+        <button id="startGame" class="success">Start Game</button>
+      </div>
+      
+      <button id="readyButton" class="player-only">Ready Up</button>
     </div>
-
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Game Settings</h2>
-            <div class="setting-item">
-                <label for="roundTime">Round Time (minutes):</label>
-                <input type="number" id="roundTime" min="1" max="10" value="5">
-            </div>
-            <div class="setting-item">
-                <label for="maxPlayers">Max Players:</label>
-                <input type="number" id="maxPlayers" min="3" max="10" value="8">
-            </div>
-            <button id="saveSettings">Save Settings</button>
+    
+    <div class="lobby-main">
+      <div class="chat-container">
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input">
+          <input type="text" id="chatInput" placeholder="Type a message...">
+          <button id="sendMessage">Send</button>
         </div>
+      </div>
     </div>
+  </div>
 
-    <script src="/js/lobby.js"></script>
-    <script src="/js/session.js"></script>
+  <script src="/js/lobby.js"></script>
 </body>
 </html>

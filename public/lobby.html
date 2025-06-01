@@ -7,30 +7,26 @@
   <link href="/style.css" rel="stylesheet">
 </head>
 <body>
-  <div class="container lobby">
-    <div class="lobby-sidebar">
-      <h2>Players</h2>
-      <ul id="players" class="player-list"></ul>
+  <div class="lobby-container">
+    <div class="sidebar">
+      <h2>Players (<span id="playerCount">0</span>)</h2>
+      <ul id="players"></ul>
       
-      <div id="lobbySettings" class="host-only">
-        <h2>Game Settings</h2>
+      <div id="hostControls" class="host-only">
+        <h3>Game Settings</h3>
         <div class="setting">
-          <label>Round Time (min)</label>
-          <input type="number" id="roundTime" min="1" max="10" value="5">
+          <label>Round Time: <span id="roundTimeValue">5</span> min</label>
+          <input type="range" id="roundTime" min="1" max="10" value="5">
         </div>
-        <div class="setting">
-          <label>Max Players</label>
-          <input type="number" id="maxPlayers" min="3" max="10" value="8">
-        </div>
-        <button id="startGame" class="success">Start Game</button>
+        <button id="startGame">Start Game</button>
       </div>
       
       <button id="readyButton" class="player-only">Ready Up</button>
     </div>
     
-    <div class="lobby-main">
-      <div class="chat-container">
-        <div id="chatMessages" class="chat-messages"></div>
+    <div class="main">
+      <div class="chat">
+        <div id="chatMessages"></div>
         <div class="chat-input">
           <input type="text" id="chatInput" placeholder="Type a message...">
           <button id="sendMessage">Send</button>
@@ -38,7 +34,6 @@
       </div>
     </div>
   </div>
-
   <script src="/js/lobby.js"></script>
 </body>
 </html>

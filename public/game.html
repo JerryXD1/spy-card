@@ -7,24 +7,24 @@
   <link href="/style.css" rel="stylesheet">
 </head>
 <body>
-  <div class="container game">
-    <div class="lobby-sidebar">
+  <div class="game-container">
+    <div class="sidebar">
       <div class="game-info">
         <h2>Round <span id="roundNumber">1</span></h2>
         <p>Time: <span id="timeLeft">05:00</span></p>
         <p>Role: <span id="playerRole">Player</span></p>
       </div>
       
-      <div id="imposterSection" class="imposter-only">
+      <div id="imposterControls" class="imposter-only">
         <button id="guessWord">Guess Word</button>
       </div>
       
-      <button id="initiateVote" class="danger">Vote for Spy</button>
+      <button id="initiateVote">Vote for Spy</button>
     </div>
     
-    <div class="lobby-main">
-      <div class="chat-container">
-        <div id="gameChatMessages" class="chat-messages"></div>
+    <div class="main">
+      <div class="chat">
+        <div id="gameChatMessages"></div>
         <div class="chat-input">
           <input type="text" id="gameChatInput" placeholder="Describe the word...">
           <button id="sendGameMessage">Send</button>
@@ -32,7 +32,6 @@
       </div>
     </div>
   </div>
-
   <script src="/js/game.js"></script>
 </body>
 </html>

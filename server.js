@@ -8,14 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Load words
 const words = JSON.parse(readFileSync(path.join(__dirname, 'words.json'), 'utf-8'));
 
-// Middleware
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Routes
 app.get('/categories', (req, res) => res.json(Object.keys(words)));
 
 app.post('/create-lobby', (req, res) => {
@@ -24,10 +21,8 @@ app.post('/create-lobby', (req, res) => {
     name: req.body.name,
     categories: req.body.categories,
     players: [],
-    settings: {
-      roundTime: 5,
-      maxPlayers: 8
-    }
+    settings: { roundTime: 5, maxPlayers: 8 },
+    gameState: null
   };
   res.json({ roomId });
 });
@@ -41,7 +36,6 @@ app.post('/join-lobby', (req, res) => {
   res.json({ success: true });
 });
 
-// WebSocket
 const lobbies = {};
 const clients = {};
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
@@ -60,53 +54,74 @@ wss.on('connection', (ws, req) => {
 
 function handleMessage(clientId, data) {
   const { ws, roomId } = clients[clientId] || {};
-  if (!ws) return;
+  const lobby = lobbies[roomId];
+  if (!ws || !lobby) return;
 
   switch (data.type) {
     case 'identify':
-      const player = {
-        id: clientId,
-        username: data.username,
-        isHost: lobbies[roomId].players.length === 0,
-        isReady: false
-      };
-      lobbies[roomId].players.push(player);
-      ws.send(JSON.stringify({ type: 'role', isHost: player.isHost }));
-      broadcast(roomId, { type: 'playerList', players: lobbies[roomId].players });
+      handleIdentify(clientId, roomId, data.username);
       break;
-
-    case 'updateSettings':
-      if (lobbies[roomId].players.find(p => p.id === clientId)?.isHost) {
-        lobbies[roomId].settings = { ...lobbies[roomId].settings, ...data };
-        broadcast(roomId, { type: 'settingsUpdate', settings: lobbies[roomId].settings });
-      }
-      break;
-
     case 'setReady':
-      const playerToUpdate = lobbies[roomId].players.find(p => p.id === clientId);
-      if (playerToUpdate) playerToUpdate.isReady = data.ready;
-      broadcast(roomId, { type: 'playerList', players: lobbies[roomId].players });
+      handleSetReady(clientId, roomId, data.ready);
       break;
-
     case 'startGame':
-      if (lobbies[roomId].players.find(p => p.id === clientId)?.isHost) {
-        broadcast(roomId, { type: 'gameStart' });
-      }
+      handleStartGame(clientId, roomId);
       break;
-
     case 'chatMessage':
       broadcast(roomId, { type: 'chatMessage', sender: data.sender, message: data.message });
+      break;
+    case 'submitVote':
+      handleVote(roomId, data.playerId);
+      break;
+    case 'submitGuess':
+      handleGuess(roomId, clientId, data.guess);
       break;
   }
 }
 
-function handleDisconnect(clientId) {
-  const { roomId } = clients[clientId] || {};
-  if (!roomId) return;
+function handleIdentify(clientId, roomId, username) {
+  const lobby = lobbies[roomId];
+  const isHost = lobby.players.length === 0;
+  const player = { id: clientId, username, isHost, isReady: false, isImposter: false };
+  lobby.players.push(player);
+  
+  clients[clientId].ws.send(JSON.stringify({ 
+    type: 'roleAssignment', 
+    isHost, 
+    isImposter: false 
+  }));
+  
+  broadcast(roomId, { type: 'playerList', players: lobby.players });
+}
 
-  lobbies[roomId].players = lobbies[roomId].players.filter(p => p.id !== clientId);
-  delete clients[clientId];
-  broadcast(roomId, { type: 'playerList', players: lobbies[roomId].players });
+function handleStartGame(clientId, roomId) {
+  const lobby = lobbies[roomId];
+  const host = lobby.players.find(p => p.id === clientId);
+  if (!host?.isHost) return;
+
+  // Select imposter
+  const imposterIndex = Math.floor(Math.random() * lobby.players.length);
+  lobby.players[imposterIndex].isImposter = true;
+  
+  // Select word
+  const categories = lobby.categories || Object.keys(words);
+  const category = categories[Math.floor(Math.random() * categories.length)];
+  const wordList = words[category];
+  const word = wordList[Math.floor(Math.random() * wordList.length)];
+  
+  lobby.gameState = { word, imposterId: lobby.players[imposterIndex].id };
+  
+  // Send roles and start game
+  lobby.players.forEach(player => {
+    clients[player.id].ws.send(JSON.stringify({
+      type: 'roleAssignment',
+      isHost: player.isHost,
+      isImposter: player.isImposter,
+      word: player.isImposter ? null : word
+    }));
+  });
+  
+  broadcast(roomId, { type: 'gameStart' });
 }
 
 function broadcast(roomId, message) {

@@ -1,0 +1,8 @@
+<!-- schnörkelloses „Detektiv“-Icon -->
+<svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="12" cy="12" r="10" fill="#7b5cf2"/>
+  <path d="M6 17c1.2-3 10.8-3 12 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="9" cy="11" r="1.5" fill="#fff"/>
+  <circle cx="15" cy="11" r="1.5" fill="#fff"/>
+  <path d="M8 8l1-3h6l1 3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+</svg>

@@ -1,92 +1,54 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spy Card | Lobby</title>
-
-  <!-- Tailwind über CDN -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
-  <script defer src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/js/all.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spy Card – Lobby</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gradient-to-br from-indigo-900 to-purple-900 text-white min-h-screen flex flex-col">
+<body class="bg-[#0f0e1c] text-white min-h-screen flex flex-col">
+<header class="flex justify-between items-center px-6 py-4 bg-black/40">
+  <div class="text-2xl font-bold"><img src="spy-icon.svg" class="inline w-8 mr-2">Lobby <span id="roomName"></span></div>
+  <button id="startBtn" class="hidden bg-[#7b5cf2] hover:bg-[#977eff] px-4 py-2 rounded-lg font-bold">▶ Start</button>
+</header>
 
-  <!-- Header -->
-  <header class="flex justify-between items-center bg-black bg-opacity-30 backdrop-blur px-6 py-3">
-    <h1 class="text-2xl font-extrabold tracking-wider">
-      Lobby <span id="lobbyName" class="text-yellow-400"></span>
-      <span class="ml-3 text-sm text-gray-300">Code: <span id="lobbyCode" class="font-bold"></span></span>
-    </h1>
+<main class="flex-grow grid lg:grid-cols-[300px_1fr_300px] gap-6 p-6">
+  <!-- Chat -->
+  <section class="bg-[#1b1930] rounded-xl p-4 flex flex-col">
+    <h2 class="text-lg font-semibold mb-2">Chat</h2>
+    <div id="chatBox" class="flex-grow overflow-y-auto space-y-1 mb-2"></div>
+    <div class="flex">
+      <input id="chatInput" placeholder="Message" class="flex-grow bg-black/40 px-3 py-2 rounded-l-lg focus:outline-none">
+      <button id="sendChat" class="bg-[#7b5cf2] px-4 rounded-r-lg">Send</button>
+    </div>
+  </section>
 
-    <!-- Host-only Button -->
-    <button id="startBtn"
-            class="hidden bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-5 py-2 rounded-xl shadow transition">
-      ▶ Start Game
-    </button>
-  </header>
+  <!-- Players -->
+  <section class="bg-[#1b1930] rounded-xl p-4 flex flex-col">
+    <h2 class="text-lg font-semibold mb-2">Players (<span id="pCount">0</span>/<span id="pMax">8</span>)</h2>
+    <ul id="playerList" class="flex-grow space-y-1 mb-4"></ul>
+    <button id="readyBtn" class="bg-green-600 hover:bg-green-500 w-full py-2 rounded-lg font-bold">✅ READY</button>
+  </section>
 
-  <!-- Main Grid -->
-  <main class="flex-grow grid grid-cols-1 lg:grid-cols-[300px_1fr_300px] gap-6 p-6">
+  <!-- Settings -->
+  <section class="bg-[#1b1930] rounded-xl p-4 space-y-3">
+    <h2 class="text-lg font-semibold">Settings</h2>
+    <div>
+      <label class="block mb-1">Imposter</label>
+      <input id="impInput" type="number" min="1" max="3" class="w-full bg-black/40 px-3 py-2 rounded-lg">
+    </div>
+    <div>
+      <label class="block mb-1">Max Players</label>
+      <input id="maxInput" type="number" min="4" max="10" class="w-full bg-black/40 px-3 py-2 rounded-lg">
+    </div>
+    <div>
+      <label class="block mb-1">Categories</label>
+      <div id="catWrap" class="grid grid-cols-2 gap-2"></div>
+    </div>
+  </section>
+</main>
 
-    <!-- Chat (links) -->
-    <section class="bg-black bg-opacity-40 rounded-2xl p-4 flex flex-col">
-      <h2 class="text-xl font-semibold mb-3"><i class="fa-regular fa-comment-dots mr-2"></i>Chat</h2>
-
-      <div id="chatBox" class="flex-grow overflow-y-auto border border-white/10 rounded-lg p-3 space-y-2 bg-black bg-opacity-30"></div>
-
-      <div class="mt-3 flex">
-        <input id="chatInput" placeholder="Nachricht…" autocomplete="off"
-               class="flex-grow rounded-l-lg bg-black bg-opacity-40 px-3 py-2 focus:outline-none">
-        <button id="sendChat"
-                class="bg-purple-500 hover:bg-purple-400 px-5 rounded-r-lg"><i class="fa-solid fa-paper-plane"></i></button>
-      </div>
-    </section>
-
-    <!-- Players (center) -->
-    <section class="bg-black bg-opacity-40 rounded-2xl p-4 flex flex-col">
-      <h2 class="text-xl font-semibold mb-3"><i class="fa-solid fa-users mr-2"></i>Players (<span id="pCount">0</span>/<span id="pMax">8</span>)</h2>
-
-      <ul id="playerList" class="flex-grow space-y-2"></ul>
-
-      <!-- Ready Button -->
-      <button id="readyBtn"
-              class="mt-4 bg-green-500 hover:bg-green-400 w-full py-3 rounded-xl font-bold transition">
-        ✅ READY
-      </button>
-    </section>
-
-    <!-- Settings (rechts) -->
-    <section class="bg-black bg-opacity-40 rounded-2xl p-4 space-y-4">
-      <h2 class="text-xl font-semibold"><i class="fa-solid fa-sliders mr-2"></i>Settings</h2>
-
-      <!-- Imposter -->
-      <div>
-        <label class="block mb-1 font-medium">Imposter Count</label>
-        <input id="impCount" type="number" min="1" max="3"
-               class="w-full bg-black bg-opacity-40 rounded-lg p-2 disabled:opacity-40">
-      </div>
-
-      <!-- Max Players -->
-      <div>
-        <label class="block mb-1 font-medium">Max Players</label>
-        <input id="maxPlayers" type="number" min="4" max="10"
-               class="w-full bg-black bg-opacity-40 rounded-lg p-2 disabled:opacity-40">
-      </div>
-
-      <!-- Kategorien -->
-      <div>
-        <div class="flex justify-between items-center mb-1">
-          <label class="font-medium">Categories</label>
-          <button id="selectAllCats" class="text-sm text-purple-400 hover:underline">Toggle All</button>
-        </div>
-        <div id="catList" class="grid grid-cols-2 gap-2">
-          <!-- JS füllt Checkboxen -->
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="js/lobby.js" type="module"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script type="module" src="js/lobby.js"></script>
 </body>
 </html>

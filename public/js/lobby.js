@@ -1,108 +1,90 @@
-// Mini-store (Raumdaten kamen via query + localStorage vom Homescreen)
-const urlParams   = new URLSearchParams(window.location.search);
-const roomName    = urlParams.get('room')        || localStorage.getItem('roomName');
-const isHost      = urlParams.get('host') === '1' || false;              // Homescreen könnte host=1 setzen
-const lobbyCode   = localStorage.getItem('joinCode') || 'LOCAL';
+// url params → ?room=myroom&host=1&player=Jerry
+const qp    = new URLSearchParams(location.search);
+const code  = qp.get('room');
+const host  = qp.get('host') === '1';
+const me    = qp.get('player') || 'You';
 
-// Socket
-const socket = io();
-
-// DOM-Refs
-const lobbyNameEl = document.getElementById('lobbyName');
-const lobbyCodeEl = document.getElementById('lobbyCode');
-const startBtn    = document.getElementById('startBtn');
-const playerList  = document.getElementById('playerList');
-const pCountEl    = document.getElementById('pCount');
-const pMaxEl      = document.getElementById('pMax');
-const readyBtn    = document.getElementById('readyBtn');
-
-const impCountInp = document.getElementById('impCount');
-const maxPlayersInp = document.getElementById('maxPlayers');
-const catList     = document.getElementById('catList');
-const selectAllCats = document.getElementById('selectAllCats');
-
+document.getElementById('roomName').textContent = code;
+const startBtn  = document.getElementById('startBtn');
+const readyBtn  = document.getElementById('readyBtn');
 const chatBox   = document.getElementById('chatBox');
 const chatInput = document.getElementById('chatInput');
 const sendChat  = document.getElementById('sendChat');
+const pCount    = document.getElementById('pCount');
+const pMax      = document.getElementById('pMax');
+const playerList= document.getElementById('playerList');
+const impInput  = document.getElementById('impInput');
+const maxInput  = document.getElementById('maxInput');
+const catWrap   = document.getElementById('catWrap');
 
-// ─────────────────────────────
-// Init UI
-lobbyNameEl.textContent = roomName || 'Unnamed';
-lobbyCodeEl.textContent = lobbyCode;
+const socket = io();
 
-if (isHost) {
-  startBtn.classList.remove('hidden');
-  impCountInp.disabled = false;
-  maxPlayersInp.disabled = false;
-} else {
-  impCountInp.disabled = true;
-  maxPlayersInp.disabled = true;
-}
+// Host-UI
+if (host) startBtn.classList.remove('hidden');
+else { impInput.disabled = maxInput.disabled = true; }
 
-// Kategorien (Demo)
 const categories = ['People','Films','Series','Games','Places','Brands'];
-categories.forEach(cat => {
-  const id = 'cat-' + cat;
-  catList.insertAdjacentHTML('beforeend', `
-    <label class="flex items-center gap-2">
-      <input type="checkbox" id="${id}" class="catCheckbox accent-purple-500" checked ${!isHost && 'disabled'}>
-      <span>${cat}</span>
-    </label>
-  `);
+categories.forEach(c=>{
+  catWrap.insertAdjacentHTML('beforeend',`
+  <label class="flex items-center gap-2">
+    <input type="checkbox" value="${c}" class="cat accent-purple-500" checked ${!host&&'disabled'}>
+    <span>${c}</span>
+  </label>`);
 });
 
-// Toggle-All Cats (nur Host)
-if (!isHost) selectAllCats.classList.add('hidden');
-selectAllCats.onclick = () => {
-  document.querySelectorAll('.catCheckbox').forEach(cb => cb.checked = !cb.checked);
-};
+// Events
+readyBtn.onclick = ()=>socket.emit('toggleReady', code);
+startBtn.onclick = ()=>socket.emit('startGame', code);
 
-// Ready-Button
-let readyState = false;
-readyBtn.onclick = () => {
-  readyState = !readyState;
-  readyBtn.textContent = readyState ? '❌ UNREADY' : '✅ READY';
-  readyBtn.classList.toggle('bg-green-500', !readyState);
-  readyBtn.classList.toggle('bg-red-500', readyState);
-  socket.emit('update-ready', { code: lobbyCode, ready: readyState });
-};
+sendChat.onclick = sendMsg;
+chatInput.addEventListener('keydown',e=>e.key==='Enter'&&sendMsg());
 
-// Start-Game (Host)
-startBtn.onclick = () => socket.emit('start-game', lobbyCode);
-
-// Chat
-sendChat.onclick = sendMessage;
-chatInput.addEventListener('keydown', e => e.key === 'Enter' && sendMessage());
-
-function sendMessage() {
-  const msg = chatInput.value.trim();
-  if (!msg) return;
-  socket.emit('lobby-chat', { code: lobbyCode, msg });
-  chatInput.value = '';
+function sendMsg(){
+  const m = chatInput.value.trim();
+  if(!m) return;
+  socket.emit('chat',{code,msg:m});
+  chatInput.value='';
 }
 
-// ─────────────────────────────
-// Socket-Events (Demo-Backend)
-socket.on('lobby-update', data => {
-  playerList.innerHTML = '';
-  data.players.forEach(p => {
-    playerList.insertAdjacentHTML('beforeend', `
-      <li class="flex items-center justify-between bg-purple-800/40 p-2 rounded-lg">
-        <span>${p.name}</span>
-        ${p.ready ? '<span class="text-green-400 font-bold">✓</span>' : ''}
-      </li>
-    `);
+// Host-Änderungen
+[impInput,maxInput].forEach(inp=>{
+  inp.onchange = ()=>{
+    if(!host) return;
+    const cats=[...document.querySelectorAll('.cat:checked')].map(c=>c.value);
+    socket.emit('updateSettings',{code,settings:{
+      imposter:+impInput.value||1,
+      maxPlayers:+maxInput.value||8,
+      categories:cats
+    }});
+  };
+});
+catWrap.addEventListener('change',()=>impInput.onchange());
+
+// Server-Events
+socket.on('lobbyUpdate', data=>{
+  pCount.textContent = data.players.length;
+  pMax.textContent   = data.settings.maxPlayers;
+  playerList.innerHTML='';
+  data.players.forEach(p=>{
+    playerList.insertAdjacentHTML('beforeend',`
+      <li class="flex justify-between bg-black/30 px-3 py-1 rounded">
+        <span>${p.name}${p.id===socket.id?' (you)':''}</span>
+        ${p.ready?'<span class="text-green-400">✓</span>':''}
+      </li>`);
   });
-  pCountEl.textContent = data.players.length;
+  impInput.value = data.settings.imposter;
+  maxInput.value = data.settings.maxPlayers;
+  document.querySelectorAll('.cat').forEach(cb=>{
+    cb.checked = data.settings.categories.includes(cb.value);
+  });
 });
 
-socket.on('chat-msg', ({ sender, msg }) => {
-  chatBox.insertAdjacentHTML('beforeend', `
-    <div><span class="text-purple-300 font-semibold">${sender}:</span> ${msg}</div>
-  `);
-  chatBox.scrollTop = chatBox.scrollHeight;
+socket.on('chat', ({sender,msg})=>{
+  chatBox.insertAdjacentHTML('beforeend',`<div><span class="text-purple-400">${sender}:</span> ${msg}</div>`);
+  chatBox.scrollTop=chatBox.scrollHeight;
 });
 
-socket.on('game-start', () => {
-  window.location.href = 'game.html';
+socket.on('card', data=>{
+  alert(data.word?`You are citizen with word: ${data.word}`:`You are IMPOSTER! Hint: ${data.hint}`);
 });
+socket.on('gameStarted',()=>alert('Game started!'));

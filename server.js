@@ -1,87 +1,100 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
-import { nanoid } from 'nanoid';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 
-const app = express();
+const app    = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
-});
+const io     = new Server(server, { cors: { origin: '*' } });
 
 const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0'; // ← Render verlangt das!
+const HOST = '0.0.0.0';
 
-// Öffentlichen Ordner (Client-Dateien)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Wortbank laden
+// Wortbank
 let words = [];
-try {
-  words = JSON.parse(fs.readFileSync(path.join(__dirname, 'words.json'), 'utf-8'));
-} catch (err) {
-  console.error('Fehler beim Laden von words.json:', err.message);
-}
+try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'words.json'))); }
+catch { console.warn('⚠️  words.json fehlt oder invalide – benutze Fallback-Wort.'); words=[{word:'Test',category:'Test'}]; }
 
-// Spiel-Datenbank (nur im RAM)
-const games = {};
+// Lobby-Cache
+const lobbies = new Map(); // code → {hostId, players:[{id,name,ready}], settings}
 
-io.on('connection', (socket) => {
-  console.log('👤 Neuer User verbunden:', socket.id);
+io.on('connection', (sock) => {
+  console.log('🔌', sock.id);
 
-  socket.on('createLobby', ({ roomName }) => {
-    if (!roomName) return socket.emit('errorMessage', 'Room name required');
-    if (games[roomName]) return socket.emit('errorMessage', 'Room name already taken');
+  sock.on('createLobby', ({ roomName, player }) => {
+    if (!roomName) return sock.emit('errorMessage','Room name required');
+    const code = roomName.toLowerCase();
+    if (lobbies.has(code)) return sock.emit('errorMessage','Room exists');
 
-    games[roomName] = {
-      players: [],
-      state: 'waiting',
-      wordData: null,
-    };
-    socket.join(roomName);
-    const player = { id: socket.id, name: `Player-${socket.id.slice(0, 4)}` };
-    games[roomName].players.push(player);
-    socket.emit('lobbyCreated', roomName);
-    io.to(roomName).emit('updatePlayers', games[roomName].players);
+    lobbies.set(code, {
+      hostId: sock.id,
+      players:[{ id:sock.id,name:player,ready:false }],
+      settings:{ imposter:1,maxPlayers:8,categories:['People','Films','Games'] }
+    });
+    sock.join(code);
+    sock.emit('lobbyCreated', code);
+    io.to(code).emit('lobbyUpdate', lobbies.get(code));
   });
 
-  socket.on('joinLobby', ({ roomName }) => {
-    if (!roomName || !games[roomName]) return socket.emit('errorMessage', 'Room not found');
-    socket.join(roomName);
-    const player = { id: socket.id, name: `Player-${socket.id.slice(0, 4)}` };
-    games[roomName].players.push(player);
-    io.to(roomName).emit('updatePlayers', games[roomName].players);
-    socket.emit('lobbyJoined', roomName);
+  sock.on('joinLobby', ({ roomName, player }) => {
+    const lobby = lobbies.get(roomName?.toLowerCase());
+    if (!lobby) return sock.emit('errorMessage','Room not found');
+    if (lobby.players.length >= lobby.settings.maxPlayers) return sock.emit('errorMessage','Lobby full');
+
+    lobby.players.push({ id:sock.id,name:player,ready:false });
+    sock.join(roomName);
+    io.to(roomName).emit('lobbyUpdate', lobby);
+    sock.emit('lobbyJoined', roomName);
   });
 
-  socket.on('disconnect', () => {
-    console.log('❌ User disconnected:', socket.id);
-    for (const roomName in games) {
-      const game = games[roomName];
-      const idx = game.players.findIndex(p => p.id === socket.id);
-      if (idx !== -1) {
-        game.players.splice(idx, 1);
-        io.to(roomName).emit('updatePlayers', game.players);
-        if (game.players.length === 0) {
-          delete games[roomName];
-          console.log(`🗑️ Lobby "${roomName}" gelöscht.`);
-        }
-        break;
-      }
+  sock.on('toggleReady', (code) => {
+    const lobby = lobbies.get(code);
+    if (!lobby) return;
+    const p = lobby.players.find(p=>p.id===sock.id);
+    if (p) p.ready = !p.ready;
+    io.to(code).emit('lobbyUpdate', lobby);
+  });
+
+  sock.on('updateSettings', ({ code, settings }) => {
+    const lobby = lobbies.get(code);
+    if (lobby && sock.id===lobby.hostId) {
+      lobby.settings = settings;
+      io.to(code).emit('lobbyUpdate', lobby);
+    }
+  });
+
+  sock.on('startGame', (code) => {
+    const lobby = lobbies.get(code);
+    if (!lobby || sock.id!==lobby.hostId) return;
+
+    // Wort & Imposter zuteilen
+    const wordObj = words[Math.floor(Math.random()*words.length)];
+    const impIdx  = Math.floor(Math.random()*lobby.players.length);
+    lobby.players.forEach((p,i)=>{
+      io.to(p.id).emit('card', i===impIdx ? {hint:wordObj.category} : {word:wordObj.word});
+    });
+    io.to(code).emit('gameStarted');
+  });
+
+  sock.on('chat', ({code,msg})=>{
+    const p = lobbies.get(code)?.players.find(pl=>pl.id===sock.id);
+    if (p) io.to(code).emit('chat', {sender:p.name,msg});
+  });
+
+  sock.on('disconnect', ()=>{
+    for (const [code,lobby] of lobbies){
+      lobby.players = lobby.players.filter(p=>p.id!==sock.id);
+      if (!lobby.players.length) { lobbies.delete(code); }
+      else io.to(code).emit('lobbyUpdate', lobby);
     }
   });
 });
 
-// Starte den Server auf 0.0.0.0 für Render
-server.listen(PORT, HOST, () => {
-  console.log(`🚀 Server läuft auf http://${HOST}:${PORT}`);
-});
+server.listen(PORT, HOST, ()=>console.log(`🚀 http://${HOST}:${PORT}`));

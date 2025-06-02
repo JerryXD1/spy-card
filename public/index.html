@@ -6,40 +6,36 @@
     <title>Spy Card</title>
     <style>
         body {
-            font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-family: 'Whitney', sans-serif;
             background-color: #36393F;
             color: #DCDDDE;
             margin: 0;
             padding: 0;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
             height: 100vh;
         }
         
-        .container {
-            max-width: 1200px;
-            width: 100%;
-            padding: 20px;
+        .start-container {
             text-align: center;
+            max-width: 500px;
+            padding: 2rem;
         }
         
-        .logo {
-            font-size: 3rem;
-            font-weight: bold;
+        h1 {
             color: #5865F2;
+            font-size: 3rem;
             margin-bottom: 2rem;
         }
         
-        .card {
-            background-color: #2F3136;
-            border-radius: 8px;
-            padding: 2rem;
-            margin: 1rem 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
         }
         
-        .button {
+        button {
             background-color: #5865F2;
             color: white;
             border: none;
@@ -47,84 +43,148 @@
             border-radius: 4px;
             font-weight: 600;
             cursor: pointer;
-            margin: 8px;
             transition: all 0.2s;
             font-size: 1rem;
         }
         
-        .button:hover {
+        button:hover {
             background-color: #404EED;
             transform: translateY(-2px);
         }
         
-        .button-secondary {
-            background-color: #4F545C;
-        }
-        
-        .button-secondary:hover {
-            background-color: #686D73;
-        }
-        
-        .game-options {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-        
-        .input-field {
-            background-color: #40444B;
-            border: none;
-            border-radius: 4px;
-            padding: 12px;
-            color: white;
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-width: 300px;
-            margin: 8px 0;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: #2F3136;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 4px;
+            border: none;
+            background-color: #40444B;
+            color: white;
+            margin-top: 0.5rem;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">Spy Card</div>
+    <div class="start-container">
+        <h1>Spy Card</h1>
+        <p>Finde den Spion unter euch!</p>
         
-        <div class="card">
-            <h2>Game Play</h2>
-            <p>Finde den Spion unter euch!</p>
+        <div class="buttons">
+            <button id="joinGame">Spiel beitreten</button>
+            <button id="createGame">Privates Spiel erstellen</button>
         </div>
-        
-        <div class="game-options">
-            <button class="button" id="joinGame">Beitreten</button>
-            <button class="button" id="createGame">Privates Spiel erstellen</button>
+    </div>
+
+    <!-- Join Game Modal -->
+    <div class="modal" id="joinModal">
+        <div class="modal-content">
+            <h2>Spiel beitreten</h2>
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" id="joinUsername" required>
+            </div>
+            <div class="input-group">
+                <label>Lobby Name</label>
+                <input type="text" id="joinLobbyName" required>
+            </div>
+            <div class="input-group">
+                <label>Room Code</label>
+                <input type="text" id="joinRoomCode" required>
+            </div>
+            <div class="modal-buttons">
+                <button id="cancelJoin">Abbrechen</button>
+                <button id="confirmJoin">Beitreten</button>
+            </div>
         </div>
-        
-        <div class="card" style="margin-top: 2rem;">
-            <h3>Spiel beitreten</h3>
-            <input type="text" class="input-field" id="gameCode" placeholder="Spielcode eingeben">
-            <input type="text" class="input-field" id="playerName" placeholder="Dein Name">
-            <button class="button" id="joinButton">Beitreten</button>
+    </div>
+
+    <!-- Create Game Modal -->
+    <div class="modal" id="createModal">
+        <div class="modal-content">
+            <h2>Privates Spiel erstellen</h2>
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" id="createUsername" required>
+            </div>
+            <div class="input-group">
+                <label>Lobby Name</label>
+                <input type="text" id="createLobbyName" required>
+            </div>
+            <div class="modal-buttons">
+                <button id="cancelCreate">Abbrechen</button>
+                <button id="confirmCreate">Erstellen</button>
+            </div>
         </div>
     </div>
 
     <script>
-        document.getElementById('joinButton').addEventListener('click', () => {
-            const gameCode = document.getElementById('gameCode').value;
-            const playerName = document.getElementById('playerName').value;
+        // Join Game
+        document.getElementById('joinGame').addEventListener('click', () => {
+            document.getElementById('joinModal').style.display = 'flex';
+        });
+        
+        document.getElementById('cancelJoin').addEventListener('click', () => {
+            document.getElementById('joinModal').style.display = 'none';
+        });
+        
+        document.getElementById('confirmJoin').addEventListener('click', () => {
+            const username = document.getElementById('joinUsername').value;
+            const lobbyName = document.getElementById('joinLobbyName').value;
+            const roomCode = document.getElementById('joinRoomCode').value;
             
-            if (gameCode && playerName) {
-                localStorage.setItem('username', playerName);
-                window.location.href = `lobby.html?room=${gameCode}`;
-            } else {
-                alert('Bitte gib einen Spielcode und deinen Namen ein!');
+            if (username && lobbyName && roomCode) {
+                localStorage.setItem('username', username);
+                window.location.href = `lobby.html?room=${roomCode}&lobby=${encodeURIComponent(lobbyName)}`;
             }
         });
         
+        // Create Game
         document.getElementById('createGame').addEventListener('click', () => {
-            const playerName = prompt('Gib deinen Namen ein:');
-            if (playerName) {
-                localStorage.setItem('username', playerName);
-                window.location.href = `lobby.html?host=true`;
+            document.getElementById('createModal').style.display = 'flex';
+        });
+        
+        document.getElementById('cancelCreate').addEventListener('click', () => {
+            document.getElementById('createModal').style.display = 'none';
+        });
+        
+        document.getElementById('confirmCreate').addEventListener('click', () => {
+            const username = document.getElementById('createUsername').value;
+            const lobbyName = document.getElementById('createLobbyName').value;
+            
+            if (username && lobbyName) {
+                localStorage.setItem('username', username);
+                const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                window.location.href = `lobby.html?room=${roomCode}&lobby=${encodeURIComponent(lobbyName)}&host=true`;
             }
         });
     </script>

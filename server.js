@@ -8,11 +8,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Load words
 const words = JSON.parse(readFileSync(path.join(__dirname, 'words.json'), 'utf-8'));
 
+// Middleware
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
+// Routes
 app.get('/categories', (req, res) => res.json(Object.keys(words)));
 
 app.post('/create-lobby', (req, res) => {
@@ -21,7 +24,10 @@ app.post('/create-lobby', (req, res) => {
     name: req.body.name,
     categories: req.body.categories,
     players: [],
-    settings: { roundTime: 5, maxPlayers: 8 },
+    settings: { 
+      roundTime: 5, 
+      maxPlayers: 8 
+    },
     gameState: null
   };
   res.json({ roomId });
@@ -36,6 +42,7 @@ app.post('/join-lobby', (req, res) => {
   res.json({ success: true });
 });
 
+// WebSocket
 const lobbies = {};
 const clients = {};
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
@@ -54,12 +61,19 @@ wss.on('connection', (ws, req) => {
 
 function handleMessage(clientId, data) {
   const { ws, roomId } = clients[clientId] || {};
+  if (!ws || !roomId) return;
   const lobby = lobbies[roomId];
-  if (!ws || !lobby) return;
+  if (!lobby) return;
 
   switch (data.type) {
     case 'identify':
       handleIdentify(clientId, roomId, data.username);
+      break;
+    case 'updateSettings':
+      if (lobby.players.find(p => p.id === clientId)?.isHost) {
+        lobby.settings = { ...lobby.settings, ...data };
+        broadcast(roomId, { type: 'settingsUpdate', settings: lobby.settings });
+      }
       break;
     case 'setReady':
       handleSetReady(clientId, roomId, data.ready);
@@ -68,7 +82,11 @@ function handleMessage(clientId, data) {
       handleStartGame(clientId, roomId);
       break;
     case 'chatMessage':
-      broadcast(roomId, { type: 'chatMessage', sender: data.sender, message: data.message });
+      broadcast(roomId, { 
+        type: 'chatMessage', 
+        sender: data.sender, 
+        message: data.message 
+      });
       break;
     case 'submitVote':
       handleVote(roomId, data.playerId);
@@ -79,10 +97,28 @@ function handleMessage(clientId, data) {
   }
 }
 
+function handleDisconnect(clientId) {
+  const { roomId } = clients[clientId] || {};
+  if (!roomId) return;
+
+  const lobby = lobbies[roomId];
+  if (!lobby) return;
+
+  lobby.players = lobby.players.filter(p => p.id !== clientId);
+  delete clients[clientId];
+  broadcast(roomId, { type: 'playerList', players: lobby.players });
+}
+
 function handleIdentify(clientId, roomId, username) {
   const lobby = lobbies[roomId];
   const isHost = lobby.players.length === 0;
-  const player = { id: clientId, username, isHost, isReady: false, isImposter: false };
+  const player = { 
+    id: clientId, 
+    username, 
+    isHost, 
+    isReady: false, 
+    isImposter: false 
+  };
   lobby.players.push(player);
   
   clients[clientId].ws.send(JSON.stringify({ 
@@ -92,6 +128,15 @@ function handleIdentify(clientId, roomId, username) {
   }));
   
   broadcast(roomId, { type: 'playerList', players: lobby.players });
+}
+
+function handleSetReady(clientId, roomId, ready) {
+  const lobby = lobbies[roomId];
+  const player = lobby.players.find(p => p.id === clientId);
+  if (player) {
+    player.isReady = ready;
+    broadcast(roomId, { type: 'playerList', players: lobby.players });
+  }
 }
 
 function handleStartGame(clientId, roomId) {
@@ -124,6 +169,18 @@ function handleStartGame(clientId, roomId) {
   broadcast(roomId, { type: 'gameStart' });
 }
 
+function handleVote(roomId, playerId) {
+  // Implement voting logic here
+  const lobby = lobbies[roomId];
+  // ... voting implementation
+}
+
+function handleGuess(roomId, clientId, guess) {
+  // Implement guess logic here
+  const lobby = lobbies[roomId];
+  // ... guess implementation
+}
+
 function broadcast(roomId, message) {
   Object.values(clients).forEach(client => {
     if (client.roomId === roomId) {
@@ -133,5 +190,5 @@ function broadcast(roomId, message) {
 }
 
 function generateId(length) {
-  return Math.random().toString(36).substring(2, 2+length).toUpperCase();
+  return Math.random().toString(36).substring(2, 2 + length).toUpperCase();
 }
